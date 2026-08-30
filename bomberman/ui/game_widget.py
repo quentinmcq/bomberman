@@ -159,7 +159,8 @@ class GameWidget(QWidget):
             self._held.remove(direction)
 
     def _step(self, player: Player, direction: Direction) -> None:
-        assert self.game is not None
+        if self.game is None:
+            return
         self.game.move(player, direction)
         self._cooldown = MOVE_REPEAT
 
@@ -205,7 +206,8 @@ class GameWidget(QWidget):
     def _sync(self) -> None:
         """Relaie l'état du moteur : sons, fin de partie, phase musicale."""
         game = self.game
-        assert game is not None
+        if game is None:
+            return
         sounds = {EVENT_SOUNDS[e.kind] for e in game.drain_events() if e.kind in EVENT_SOUNDS}
         for name in sorted(sounds):
             self.sound.emit(name)
@@ -224,7 +226,7 @@ class GameWidget(QWidget):
         if self.game is None:
             painter.fillRect(self.rect(), BACKGROUND)
         else:
-            self.renderer.paint(painter, self.game, self.rect())
+            self.renderer.paint(painter, self.game, self.rect(), self.human_index)
             if self.game.over:
                 remaining = max(0, math.ceil(RESULT_DELAY - self._result_timer))
                 self.renderer.paint_result(painter, self.game, self.rect(), remaining)

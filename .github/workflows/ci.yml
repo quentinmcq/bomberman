@@ -42,3 +42,8 @@ jobs:
 
       - name: Tests (pytest)
         run: uv run pytest
+
+      - name: Audit de sécurité des dépendances (pip-audit)
+        run: |
+          uv export --format requirements-txt --no-emit-project --no-hashes -o requirements-lock.txt
+          uvx pip-audit -r requirements-lock.txt --no-deps --progress-spinner off

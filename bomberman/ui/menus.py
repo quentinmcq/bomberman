@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QSettings, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QColor, QIcon
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QHBoxLayout,
@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 
 from ..assets import Textures
 from ..model import PLAYER_NAMES, Direction
+from .renderer import contrast_text
 from .styles import TEAM_COLORS
 
 CONTROLS_HELP = (
@@ -31,6 +32,7 @@ SETTINGS_PLAYER_KEY = "player"
 def _button(text: str) -> QPushButton:
     button = QPushButton(text)
     button.setCursor(Qt.CursorShape.PointingHandCursor)
+    button.setAutoDefault(True)
     return button
 
 
@@ -41,6 +43,8 @@ class MuteButton(QPushButton):
         super().__init__(parent)
         self.setCheckable(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAutoDefault(True)
+        self.setAccessibleName("Couper ou rétablir le son")
         self.toggled.connect(self._refresh_text)
         self.setChecked(muted)
         self._refresh_text(muted)
@@ -119,12 +123,15 @@ class SetupPage(QWidget):
         for index, name in enumerate(PLAYER_NAMES):
             button = QPushButton(name)
             button.setCheckable(True)
+            button.setAutoDefault(True)
+            button.setAccessibleName(f"Personnage {name}")
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.setIcon(QIcon(textures.player(index, Direction.DOWN, 0, 96)))
             button.setIconSize(QSize(96, 96))
+            text_color = contrast_text(QColor(TEAM_COLORS[index])).name()
             button.setStyleSheet(
-                f"QPushButton {{ background: {TEAM_COLORS[index]}; min-width: 170px;"
-                " min-height: 150px; padding: 8px; }"
+                f"QPushButton {{ background: {TEAM_COLORS[index]}; color: {text_color};"
+                " min-width: 170px; min-height: 150px; padding: 8px; }"
                 " QPushButton:checked { border: 4px solid white; }"
             )
             self.group.addButton(button, index)
@@ -180,6 +187,9 @@ class OptionsPage(QWidget):
         self.slider.setRange(0, 100)
         self.slider.setValue(volume)
         self.slider.setFixedWidth(320)
+        self.slider.setAccessibleName("Volume")
+        self.slider.setSingleStep(5)
+        self.slider.setPageStep(20)
         self.slider.valueChanged.connect(self.volume_changed)
 
         self.mute_button = MuteButton(muted)

@@ -16,6 +16,8 @@ from bomberman.model import Direction, Flame, FlameShape
 from bomberman.ui.game_widget import RESULT_DELAY, TICK_MS, GameWidget
 from bomberman.ui.main_window import PAGE_GAME, PAGE_MENU, PAGE_OPTIONS, PAGE_SETUP, MainWindow
 from bomberman.ui.menus import SetupPage
+from bomberman.ui.renderer import contrast_text, relative_luminance
+from bomberman.ui.styles import ACCENT, TEAM_COLORS
 
 
 @pytest.fixture(scope="module")
@@ -36,6 +38,22 @@ def test_textures_scale_and_cache(app):
     frame = textures.player(0, Direction.UP, 1, 32)
     assert frame.width() == 32 and frame.height() == 32
     assert textures.tile("bomb", 40) is textures.tile("bomb", 40)
+
+
+def contrast_ratio(foreground, background) -> float:
+    lighter, darker = sorted(
+        (relative_luminance(foreground), relative_luminance(background)), reverse=True
+    )
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+@pytest.mark.parametrize("background", [ACCENT, *TEAM_COLORS])
+def test_hud_and_button_text_meets_wcag_aa_contrast(app, background):
+    from PyQt6.QtGui import QColor
+
+    color = QColor(background)
+    assert contrast_ratio(contrast_text(color), color) >= 4.5
+    assert contrast_ratio(contrast_text(color.darker(260)), color.darker(260)) >= 4.5
 
 
 def test_scaled_texture_cache_is_bounded(app, monkeypatch):

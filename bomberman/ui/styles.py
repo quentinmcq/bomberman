@@ -4,7 +4,8 @@ ACCENT = "#e4c934"
 ACCENT_LIGHT = "#f0d75a"
 ACCENT_DARK = "#c9ad24"
 
-TEAM_COLORS = ("#d62828", "#1d6fd6", "#f2c14e", "#e05299")
+TEXT_ON_ACCENT = "#1a1a1a"
+TEAM_COLORS = ("#d62828", "#1d6fd6", "#f2c14e", "#c72c76")
 
 ROOT_QSS = """
 QWidget#root {
@@ -19,7 +20,7 @@ BUTTON_QSS = f"""
 QPushButton {{
     background: {ACCENT};
     border-radius: 10px;
-    color: white;
+    color: {TEXT_ON_ACCENT};
     font-weight: bold;
     font-size: 26px;
     border: 1.5px solid black;
@@ -30,7 +31,7 @@ QPushButton {{
 }}
 QPushButton:hover {{ background: {ACCENT_LIGHT}; }}
 QPushButton:pressed, QPushButton:checked {{ background: {ACCENT_DARK}; }}
-QPushButton:focus {{ border: 2.5px solid white; }}
+QPushButton:focus {{ border: 3px solid white; }}
 """
 
 TITLE_QSS = """
@@ -57,7 +58,7 @@ PANEL_LABEL_QSS = f"""
 QLabel#panel {{
     background: {ACCENT};
     border-radius: 10px;
-    color: white;
+    color: {TEXT_ON_ACCENT};
     font-weight: bold;
     font-size: 28px;
     border: 1.5px solid black;

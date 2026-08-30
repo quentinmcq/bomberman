@@ -162,7 +162,44 @@ sont remplacées par des créations originales générées procéduralement, san
   la CI passe, maintenance mensuelle de `uv.lock`, mises à jour de `.python-version`.
 - `.gitignore` complété ; `.idea/` retiré de l'index (fichiers locaux conservés).
 
-## 3. Reste à faire
+## 3. Sécurité et accessibilité
+
+### 3.1 Sécurité
+
+Surface d'attaque réduite : application de bureau hors ligne, sans réseau, sans fichier fourni
+par l'utilisateur, sans désérialisation. Vérifications faites le 30 août 2026 :
+
+- **Code** : aucune API sensible (`eval`, `exec`, `pickle`, `subprocess`, `os.system`) ;
+  `bandit -r bomberman tools` ne remonte que des faux positifs de sévérité *Low* (jetons `'k'`,
+  `'h'`, `'s'` du séquenceur pris pour des mots de passe ; `random` utilisé pour le jeu, pas pour
+  de la cryptographie). Les `assert` de l'interface ont été remplacés par des gardes explicites.
+- **Entrées** : arguments CLI typés par `argparse` ; la seule donnée persistée (personnage choisi,
+  `QSettings`) est relue comme entier et bornée à 0-3.
+- **Chemins** : ressources résolues par rapport au package, jamais au répertoire courant.
+- **Dépendances** : `pip-audit` sur l'export de `uv.lock` → aucune vulnérabilité connue ; un pas
+  `pip-audit` est ajouté à la CI ; versions verrouillées, actions GitHub épinglées par SHA,
+  Renovate configuré (fusion automatique limitée aux outils de dev et aux actions, sous CI verte).
+- **Licence** : PyQt6 est GPL v3 ; à garder en tête pour la licence du projet.
+
+### 3.2 Accessibilité
+
+- **Contraste** (WCAG 2 AA, 4,5:1 minimum) : le texte blanc sur les boutons jaunes d'origine ne
+  faisait que **1,65:1**. Le texte des boutons et du panneau est passé en sombre (10,5:1) ; les
+  cases de score choisissent noir ou blanc selon la luminance du fond (`contrast_text`, testé pour
+  les 4 couleurs et leur variante « éliminé ») ; le rose du HUD est assombri (`#c72c76`, 5,2:1).
+- **Daltonisme** : les personnages ne se distinguaient que par la couleur ; un repère ▼ blanc
+  cerclé de noir surmonte désormais le personnage joué, et le HUD affiche « Vous ».
+- **Clavier** : tout est atteignable au clavier (Tab, Espace/Entrée sur les boutons via
+  `autoDefault`, curseur de volume par pas de 5/20, Échap pour la pause) ; l'anneau de focus
+  est un liseré blanc de 3 px.
+- **Lecteurs d'écran** : noms accessibles sur le curseur de volume, le bouton son et les cartes
+  de personnage ; état du son porté par le libellé (« Son : coupé »).
+- **Lisibilité** : plateau et textes mis à l'échelle de la fenêtre, plein écran F11, pas de
+  clignotement rapide (les flammes s'estompent en 0,45 s, la pulsation des bombes est lente).
+- Limites connues : pas de remappage des touches ni de mode « mouvement réduit » ; le jeu repose
+  sur des réflexes (pas de mode lent).
+
+## 4. Reste à faire
 
 - **Commiter** : toutes les modifications sont dans l'arbre de travail, rien n'a été commité.
 - **Activer Renovate** : installer l'application GitHub sur le dépôt (<https://github.com/apps/renovate>).

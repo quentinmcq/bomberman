@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import math
 
-from PyQt6.QtCore import QRect, Qt
-from PyQt6.QtGui import QColor, QFont, QPainter, QPen
+from PyQt6.QtCore import QPoint, QRect, Qt
+from PyQt6.QtGui import QColor, QFont, QPainter, QPen, QPolygon
 
 from ..assets import FLAME_TEXTURES, POWERUP_TEXTURES, Textures
 from ..model import BOMB_FUSE, FLAME_DURATION, Game, Player, Tile
@@ -21,6 +21,29 @@ TERRAIN_TEXTURES = {Tile.FLOOR: "floor", Tile.BRICK: "brick", Tile.STONE: "stone
 _CENTER = Qt.AlignmentFlag.AlignCenter
 _LEFT = Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
 _RIGHT = Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight
+_LUMINANCE_THRESHOLD = 0.18
+
+
+def relative_luminance(color: QColor) -> float:
+    """Luminance relative WCAG 2 (0 = noir, 1 = blanc)."""
+
+    def linear(channel: float) -> float:
+        return channel / 12.92 if channel <= 0.03928 else ((channel + 0.055) / 1.055) ** 2.4
+
+    return (
+        0.2126 * linear(color.redF())
+        + 0.7152 * linear(color.greenF())
+        + 0.0722 * linear(color.blueF())
+    )
+
+
+def contrast_text(background: QColor) -> QColor:
+    """Noir ou blanc, selon ce qui garantit un contraste d'au moins 4,5:1 sur ``background``."""
+    return (
+        QColor("black")
+        if relative_luminance(background) > _LUMINANCE_THRESHOLD
+        else QColor("white")
+    )
 
 
 class BoardRenderer:
@@ -39,12 +62,13 @@ class BoardRenderer:
         y0 = rect.y() + HUD_HEIGHT + MARGIN + (avail_h - tile * game.rows) // 2
         return tile, x0, y0
 
-    def paint(self, painter: QPainter, game: Game, rect: QRect) -> None:
+    def paint(self, painter: QPainter, game: Game, rect: QRect, human: int | None = None) -> None:
+        """Dessine la partie ; ``human`` reçoit un repère au-dessus de son personnage."""
         painter.fillRect(rect, BACKGROUND)
         tile, x0, y0 = self.board_geometry(game, rect)
         self._paint_terrain(painter, game, tile, x0, y0)
         self._paint_bombs(painter, game, tile, x0, y0)
-        self._paint_players(painter, game, tile, x0, y0)
+        self._paint_players(painter, game, tile, x0, y0, human)
         self._paint_flames(painter, game, tile, x0, y0)
         self._paint_hud(painter, game, rect)
 
@@ -92,7 +116,9 @@ class BoardRenderer:
             pixmap = self.textures.tile("bomb_pierce" if bomb.pierce else "bomb", size)
             painter.drawPixmap(x0 + bomb.col * tile + offset, y0 + bomb.row * tile + offset, pixmap)
 
-    def _paint_players(self, painter: QPainter, game: Game, tile: int, x0: int, y0: int) -> None:
+    def _paint_players(
+        self, painter: QPainter, game: Game, tile: int, x0: int, y0: int, human: int | None
+    ) -> None:
         skull = max(4, tile // 2)
         for player in game.players:
             if not player.alive:
@@ -103,6 +129,25 @@ class BoardRenderer:
             painter.drawPixmap(x, y, self.textures.player(player.index, player.facing, frame, tile))
             if player.cursed:
                 painter.drawPixmap(x + tile - skull, y, self.textures.tile("powerup_skull", skull))
+            if player.index == human:
+                self._paint_marker(painter, x + tile // 2, y, tile)
+
+    @staticmethod
+    def _paint_marker(painter: QPainter, center_x: int, top: int, tile: int) -> None:
+        """Triangle blanc pointant vers le personnage du joueur : repérable sans la couleur."""
+        height = max(5, tile // 4)
+        half = max(3, tile // 6)
+        triangle = QPolygon(
+            [
+                QPoint(center_x - half, top - height - 2),
+                QPoint(center_x + half, top - height - 2),
+                QPoint(center_x, top - 2),
+            ]
+        )
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(QColor("black"), 1.5))
+        painter.setBrush(QColor("white"))
+        painter.drawPolygon(triangle)
 
     def _paint_flames(self, painter: QPainter, game: Game, tile: int, x0: int, y0: int) -> None:
         for (r, c), flame in game.flames.items():
@@ -130,7 +175,7 @@ class BoardRenderer:
             painter.setPen(QPen(QColor("black"), 1.5))
             painter.setBrush(color)
             painter.drawRoundedRect(box, 10, 10)
-            painter.setPen(QColor("white"))
+            painter.setPen(contrast_text(color))
             inner = box.adjusted(12, 0, -12, 0)
             painter.drawText(inner, _LEFT, f"{player.name} : {player.score}")
             painter.drawText(inner, _RIGHT, self._status(player))
