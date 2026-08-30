@@ -83,4 +83,5 @@ reste à installer l'application GitHub **Renovate** sur le dépôt :
 ## Assets et licence
 
 Toutes les images et musiques sont des créations originales générées procéduralement par
-`tools/generate_assets.py` (aucun contenu tiers). Le code n'a pas encore de licence déclarée.
+`tools/generate_assets.py` (aucun contenu tiers). Le projet est sous licence
+[MIT](LICENSE). PyQt6, utilisé comme dépendance, est distribué sous GPL v3.

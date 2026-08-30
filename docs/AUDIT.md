@@ -201,9 +201,10 @@ par l'utilisateur, sans désérialisation. Vérifications faites le 30 août 202
 
 ## 4. Reste à faire
 
-- **Commiter** : toutes les modifications sont dans l'arbre de travail, rien n'a été commité.
-- **Activer Renovate** : installer l'application GitHub sur le dépôt (<https://github.com/apps/renovate>).
-- **Choisir une licence** pour le code (aucune n'est déclarée). PyQt6 est sous GPL v3 ; si c'est
-  un frein, PySide6 (LGPL) offre une API quasi identique.
+- **Activer Renovate** : installer l'application GitHub sur le dépôt (<https://github.com/apps/renovate>) —
+  le fichier `renovate.json` est prêt, mais sans l'app aucune PR n'est ouverte.
+- Licence : **MIT** (fichier `LICENSE`, métadonnée `pyproject`). Attention : PyQt6 reste sous
+  GPL v3 — un binaire distribué embarquant PyQt6 est soumis à la GPL ; PySide6 (LGPL) serait
+  l'alternative si besoin.
 - Idées : niveaux/densités de briques multiples (le menu « Niveau 1/2/3 » d'origine était vide),
   manette, exécutable autonome (PyInstaller).

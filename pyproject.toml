@@ -7,6 +7,8 @@ name = "bomberman"
 version = "2.0.0"
 description = "Bomberman-like à 1-4 joueurs en PyQt6 (projet scolaire 2019, modernisé)"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [{ name = "Quentin Macq" }]
 keywords = ["game", "pyqt6", "bomberman"]

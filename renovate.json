@@ -2,7 +2,6 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "timezone": "Europe/Paris",
-  "schedule": ["before 8am on monday"],
   "labels": ["dependencies"],
   "rangeStrategy": "bump",
   "lockFileMaintenance": {
