@@ -13,7 +13,7 @@ from .styles import ACCENT, TEAM_COLORS
 
 HUD_HEIGHT = 64
 MARGIN = 8
-IDLE_DELAY = 0.25  # secondes sans bouger avant de revenir à la pose statique
+IDLE_DELAY = 0.25
 BACKGROUND = QColor("#0f1620")
 DIM = QColor(5, 8, 15, 170)
 TERRAIN_TEXTURES = {Tile.FLOOR: "floor", Tile.BRICK: "brick", Tile.STONE: "stone"}
@@ -74,8 +74,6 @@ class BoardRenderer:
             title = f"VICTOIRE DU JOUEUR {game.winner.name.upper()} !"
             self.paint_dim(painter, rect, title, subtitle, TEAM_COLORS[game.winner.index])
 
-    # ------------------------------------------------------------------ interne
-
     def _paint_terrain(self, painter: QPainter, game: Game, tile: int, x0: int, y0: int) -> None:
         pixmaps = {kind: self.textures.tile(name, tile) for kind, name in TERRAIN_TEXTURES.items()}
         for r, row in enumerate(game.grid):
@@ -88,7 +86,6 @@ class BoardRenderer:
 
     def _paint_bombs(self, painter: QPainter, game: Game, tile: int, x0: int, y0: int) -> None:
         for bomb in game.bombs:
-            # Pulsation qui s'accélère à l'approche de l'explosion.
             speed = 6.0 + max(0.0, BOMB_FUSE - bomb.fuse) * 4.0
             size = max(4, int(tile * (1.0 + 0.08 * math.sin(game.elapsed * speed))))
             offset = (tile - size) // 2
@@ -142,5 +139,5 @@ class BoardRenderer:
     def _status(player: Player) -> str:
         if not player.alive:
             return "éliminé"
-        who = "IA" if player.is_ai else "Joueur"
+        who = "IA" if player.is_ai else "Vous"
         return f"{who}  B{player.max_bombs} P{player.fire_range}"

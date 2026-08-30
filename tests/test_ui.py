@@ -6,7 +6,7 @@ import pytest
 
 pytest.importorskip("PyQt6")
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
@@ -14,13 +14,19 @@ import bomberman.assets
 from bomberman.assets import Textures
 from bomberman.model import Direction, Flame, FlameShape
 from bomberman.ui.game_widget import RESULT_DELAY, TICK_MS, GameWidget
-from bomberman.ui.main_window import PAGE_GAME, PAGE_MENU, PAGE_OPTIONS, MainWindow
+from bomberman.ui.main_window import PAGE_GAME, PAGE_MENU, PAGE_OPTIONS, PAGE_SETUP, MainWindow
+from bomberman.ui.menus import SetupPage
 
 
 @pytest.fixture(scope="module")
 def app():
     application = QApplication.instance() or QApplication([])
     yield application
+
+
+@pytest.fixture
+def settings(tmp_path):
+    return QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
 
 
 def test_textures_scale_and_cache(app):
@@ -35,7 +41,7 @@ def test_textures_scale_and_cache(app):
 def test_scaled_texture_cache_is_bounded(app, monkeypatch):
     monkeypatch.setattr(bomberman.assets, "SCALED_CACHE_LIMIT", 16)
     textures = Textures()
-    for size in range(8, 48):  # 40 tailles différentes, comme lors d'un redimensionnement
+    for size in range(8, 48):
         textures.tile("bomb", size)
     assert textures.cached_scaled <= 16
 
@@ -48,26 +54,39 @@ def test_game_widget_keyboard_and_rendering(app):
     widget.start_new_game(seed=1)
     game = widget.game
     assert game is not None
+    assert [p.is_ai for p in game.players] == [False, True, True, True]
 
     QTest.keyClick(widget, Qt.Key.Key_D)
     assert game.players[0].pos == (1, 2)
+    QTest.keyClick(widget, Qt.Key.Key_Left)
+    assert game.players[0].pos == (1, 1)
+    QTest.keyClick(widget, Qt.Key.Key_Right)
     QTest.keyClick(widget, Qt.Key.Key_Space)
     assert len(game.bombs) == 1
     assert "bomb" in sounds
 
-    # Le joueur Bleu est une IA jusqu'à ce qu'un humain touche à ses touches.
-    assert game.players[1].is_ai
     QTest.keyClick(widget, Qt.Key.Key_L)
-    assert not game.players[1].is_ai
+    assert game.players[1].is_ai
 
     for _ in range(int(3.5 * 1000 / TICK_MS)):
         widget._on_tick()
-    assert game.bomb_at(1, 2) is None  # la bombe du joueur a explosé (les IA posent les leurs)
+    assert game.bomb_at(1, 2) is None
     assert "explosion" in sounds
 
     image = widget.grab().toImage()
     assert not image.isNull()
     assert image.width() == 900
+
+
+def test_human_can_play_any_character(app):
+    widget = GameWidget(Textures())
+    widget.start_new_game(seed=1, human=2)
+    game = widget.game
+    assert game is not None
+    assert [p.is_ai for p in game.players] == [True, True, False, True]
+    assert widget.human is game.players[2]
+    QTest.keyClick(widget, Qt.Key.Key_Up)
+    assert game.players[2].pos == (16, 1)
 
 
 def test_game_over_is_announced_when_a_human_walks_into_a_flame(app):
@@ -87,7 +106,7 @@ def test_game_over_is_announced_when_a_human_walks_into_a_flame(app):
     assert not red.alive and game.over
     assert winners == [blue]
     widget._on_tick()
-    assert winners == [blue]  # annoncé une seule fois
+    assert winners == [blue]
 
 
 def test_pause_and_result_flow(app):
@@ -101,7 +120,7 @@ def test_pause_and_result_flow(app):
     QTest.keyClick(widget, Qt.Key.Key_Escape)
     assert widget.paused and states == [True]
     pos_before = widget.game.players[0].pos
-    QTest.keyClick(widget, Qt.Key.Key_D)  # ignoré en pause
+    QTest.keyClick(widget, Qt.Key.Key_D)
     assert widget.game.players[0].pos == pos_before
     QTest.keyClick(widget, Qt.Key.Key_Escape)
     assert not widget.paused and states == [True, False]
@@ -118,8 +137,21 @@ def test_pause_and_result_flow(app):
     assert returned == [True]
 
 
-def test_main_window_navigation(app):
-    window = MainWindow(seed=1, audio_enabled=False)
+def test_setup_page_remembers_the_chosen_character(app, settings):
+    textures = Textures()
+    page = SetupPage(textures, settings)
+    assert page.selected == 0
+    chosen: list[int] = []
+    page.start.connect(chosen.append)
+    page.character_buttons[3].click()
+    page.play_button.click()
+    assert chosen == [3]
+    assert settings.value("player", type=int) == 3
+    assert SetupPage(textures, settings).selected == 3
+
+
+def test_main_window_navigation(app, settings):
+    window = MainWindow(seed=1, audio_enabled=False, settings=settings)
     window.resize(1000, 750)
     window.show()
     assert window.stack.currentIndex() == PAGE_MENU
@@ -136,13 +168,18 @@ def test_main_window_navigation(app):
     assert window.stack.currentIndex() == PAGE_MENU
 
     window.menu_page.play_button.click()
+    assert window.stack.currentIndex() == PAGE_SETUP
+    assert not window.grab().toImage().isNull()
+    window.setup_page.character_buttons[1].click()
+    window.setup_page.play_button.click()
     assert window.stack.currentIndex() == PAGE_GAME
     assert window.game_widget.game is not None
+    assert window.game_widget.human is window.game_widget.game.players[1]
     QTest.keyClick(window.game_widget, Qt.Key.Key_Escape)
     assert window.pause_overlay.isVisible()
-    window.pause_overlay.mute_button.click()  # rétablit le son depuis la pause...
+    window.pause_overlay.mute_button.click()
     assert not window.audio.muted
-    assert not window.options_page.mute_button.isChecked()  # ...et la page Options suit
+    assert not window.options_page.mute_button.isChecked()
     window.pause_overlay.resume_button.click()
     assert not window.pause_overlay.isVisible()
     assert not window.grab().toImage().isNull()

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QIcon, QKeyEvent, QResizeEvent
 from PyQt6.QtWidgets import (
     QApplication,
@@ -17,7 +17,7 @@ from ..assets import Textures, image_path
 from ..audio import AudioManager
 from ..model import Player
 from .game_widget import GameWidget
-from .menus import MenuPage, OptionsPage, PauseOverlay
+from .menus import MenuPage, OptionsPage, PauseOverlay, SetupPage
 from .styles import (
     BUTTON_QSS,
     OVERLAY_QSS,
@@ -28,8 +28,9 @@ from .styles import (
 )
 
 PAGE_MENU = 0
-PAGE_OPTIONS = 1
-PAGE_GAME = 2
+PAGE_SETUP = 1
+PAGE_OPTIONS = 2
+PAGE_GAME = 3
 
 
 class GamePage(QWidget):
@@ -44,7 +45,7 @@ class GamePage(QWidget):
         overlay.setParent(self)
         overlay.hide()
 
-    def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802 (API Qt)
+    def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self.overlay.setGeometry(self.rect())
 
@@ -56,9 +57,11 @@ class MainWindow(QMainWindow):
         seed: int | None = None,
         audio_enabled: bool | None = None,
         fullscreen: bool = False,
+        settings: QSettings | None = None,
     ) -> None:
         super().__init__()
         self.seed = seed
+        self.settings = settings if settings is not None else QSettings("quentinmcq", "Bomberman")
         self.textures = Textures()
         self.textures.preload()
         self.audio = AudioManager(self, enabled=audio_enabled)
@@ -70,15 +73,15 @@ class MainWindow(QMainWindow):
         )
 
         self.menu_page = MenuPage()
+        self.setup_page = SetupPage(self.textures, self.settings)
         self.options_page = OptionsPage(self.audio.volume, self.audio.muted)
         self.game_widget = GameWidget(self.textures)
         self.pause_overlay = PauseOverlay(self.audio.muted)
         self.game_page = GamePage(self.game_widget, self.pause_overlay)
 
         self.stack = QStackedWidget()
-        self.stack.addWidget(self.menu_page)
-        self.stack.addWidget(self.options_page)
-        self.stack.addWidget(self.game_page)
+        for page in (self.menu_page, self.setup_page, self.options_page, self.game_page):
+            self.stack.addWidget(page)
 
         root = QWidget()
         root.setObjectName("root")
@@ -91,12 +94,13 @@ class MainWindow(QMainWindow):
         self._place_window(fullscreen)
         self.show_menu()
 
-    # ------------------------------------------------------------------ mise en place
-
     def _connect_signals(self) -> None:
-        self.menu_page.play.connect(self.start_game)
+        self.menu_page.play.connect(self.show_setup)
         self.menu_page.options.connect(lambda: self.stack.setCurrentIndex(PAGE_OPTIONS))
         self.menu_page.quit.connect(self.confirm_quit)
+
+        self.setup_page.start.connect(self.start_game)
+        self.setup_page.back.connect(self.show_menu)
 
         self.options_page.volume_changed.connect(self.audio.set_volume)
         self.options_page.mute_toggled.connect(self._set_muted)
@@ -128,8 +132,6 @@ class MainWindow(QMainWindow):
         if fullscreen:
             self.showFullScreen()
 
-    # ------------------------------------------------------------------ navigation
-
     def show_menu(self) -> None:
         self.game_widget.stop()
         self.pause_overlay.hide()
@@ -137,10 +139,14 @@ class MainWindow(QMainWindow):
         self.audio.play_music("menu")
         self.menu_page.play_button.setFocus()
 
-    def start_game(self) -> None:
+    def show_setup(self) -> None:
+        self.stack.setCurrentIndex(PAGE_SETUP)
+        self.setup_page.play_button.setFocus()
+
+    def start_game(self, human: int = 0) -> None:
         self.pause_overlay.hide()
         self.stack.setCurrentIndex(PAGE_GAME)
-        self.game_widget.start_new_game(self.seed)
+        self.game_widget.start_new_game(self.seed, human=human)
 
     def _on_game_over(self, winner: Player | None) -> None:
         self.audio.play_music("victory" if winner is not None else "draw")
@@ -181,9 +187,7 @@ class MainWindow(QMainWindow):
         if answer == QMessageBox.StandardButton.Yes:
             QApplication.quit()
 
-    # ------------------------------------------------------------------ événements
-
-    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802 (API Qt)
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == Qt.Key.Key_F11:
             if self.isFullScreen():
                 self.showNormal()

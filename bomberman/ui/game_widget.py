@@ -1,10 +1,14 @@
-"""Widget de jeu : clavier, horloge et relais des événements (le dessin est délégué)."""
+"""Widget de jeu : clavier, horloge et relais des événements (le dessin est délégué).
+
+Un seul humain joue, avec le personnage choisi avant la partie ; les trois autres
+sont toujours des IA. Les touches sont fixes : Z Q S D (ou W A S D) et les flèches
+pour se déplacer, Espace pour poser une bombe.
+"""
 
 from __future__ import annotations
 
 import math
 import random
-from dataclasses import dataclass
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeyEvent, QPainter, QPaintEvent
@@ -16,41 +20,21 @@ from ..model import Direction, Game, Player
 from .renderer import BACKGROUND, BoardRenderer
 
 TICK_MS = 50
-MOVE_REPEAT = 0.16  # secondes entre deux pas lorsqu'une touche reste enfoncée
-RESULT_DELAY = 6.0  # secondes d'affichage du résultat avant retour au menu
+MOVE_REPEAT = 0.16
+RESULT_DELAY = 6.0
 
-
-@dataclass(frozen=True)
-class Binding:
-    player: int
-    direction: Direction | None  # None = poser une bombe
-
-
-# Touches du jeu d'origine (ZQSD, KOLM, flèches, pavé numérique) + alias WASD.
-KEY_BINDINGS: dict[Qt.Key, Binding] = {
-    Qt.Key.Key_Z: Binding(0, Direction.UP),
-    Qt.Key.Key_W: Binding(0, Direction.UP),
-    Qt.Key.Key_S: Binding(0, Direction.DOWN),
-    Qt.Key.Key_Q: Binding(0, Direction.LEFT),
-    Qt.Key.Key_A: Binding(0, Direction.LEFT),
-    Qt.Key.Key_D: Binding(0, Direction.RIGHT),
-    Qt.Key.Key_Space: Binding(0, None),
-    Qt.Key.Key_O: Binding(1, Direction.UP),
-    Qt.Key.Key_L: Binding(1, Direction.DOWN),
-    Qt.Key.Key_K: Binding(1, Direction.LEFT),
-    Qt.Key.Key_M: Binding(1, Direction.RIGHT),
-    Qt.Key.Key_Shift: Binding(1, None),
-    Qt.Key.Key_Up: Binding(2, Direction.UP),
-    Qt.Key.Key_Down: Binding(2, Direction.DOWN),
-    Qt.Key.Key_Left: Binding(2, Direction.LEFT),
-    Qt.Key.Key_Right: Binding(2, Direction.RIGHT),
-    Qt.Key.Key_Control: Binding(2, None),
-    Qt.Key.Key_0: Binding(2, None),
-    Qt.Key.Key_8: Binding(3, Direction.UP),
-    Qt.Key.Key_5: Binding(3, Direction.DOWN),
-    Qt.Key.Key_4: Binding(3, Direction.LEFT),
-    Qt.Key.Key_6: Binding(3, Direction.RIGHT),
-    Qt.Key.Key_Plus: Binding(3, None),
+KEY_BINDINGS: dict[Qt.Key, Direction | None] = {
+    Qt.Key.Key_Z: Direction.UP,
+    Qt.Key.Key_W: Direction.UP,
+    Qt.Key.Key_Up: Direction.UP,
+    Qt.Key.Key_S: Direction.DOWN,
+    Qt.Key.Key_Down: Direction.DOWN,
+    Qt.Key.Key_Q: Direction.LEFT,
+    Qt.Key.Key_A: Direction.LEFT,
+    Qt.Key.Key_Left: Direction.LEFT,
+    Qt.Key.Key_D: Direction.RIGHT,
+    Qt.Key.Key_Right: Direction.RIGHT,
+    Qt.Key.Key_Space: None,
 }
 
 EVENT_SOUNDS = {
@@ -62,9 +46,9 @@ EVENT_SOUNDS = {
 
 
 class GameWidget(QWidget):
-    game_over = pyqtSignal(object)  # Player gagnant, ou None en cas d'égalité
-    phase_changed = pyqtSignal(str)  # "battle" (3-4 joueurs en vie) ou "boss" (duel)
-    sound = pyqtSignal(str)  # nom d'un effet sonore à jouer
+    game_over = pyqtSignal(object)
+    phase_changed = pyqtSignal(str)
+    sound = pyqtSignal(str)
     pause_toggled = pyqtSignal(bool)
     return_to_menu = pyqtSignal()
 
@@ -72,11 +56,12 @@ class GameWidget(QWidget):
         super().__init__(parent)
         self.renderer = BoardRenderer(textures)
         self.game: Game | None = None
+        self.human_index = 0
         self._timer = QTimer(self)
         self._timer.setInterval(TICK_MS)
         self._timer.timeout.connect(self._on_tick)
-        self._held: dict[int, list[Direction]] = {}  # directions maintenues, par joueur
-        self._cooldown: dict[int, float] = {}
+        self._held: list[Direction] = []
+        self._cooldown = 0.0
         self._ai_accumulator = 0.0
         self._paused = False
         self._phase = ""
@@ -86,12 +71,13 @@ class GameWidget(QWidget):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMinimumSize(640, 480)
 
-    # ------------------------------------------------------------------ cycle de vie
-
-    def start_new_game(self, seed: int | None = None) -> None:
-        self.game = Game(random.Random(seed))
+    def start_new_game(self, seed: int | None = None, human: int = 0) -> None:
+        """Lance une partie où l'humain joue le personnage ``human`` (0-3)."""
+        rng = random.Random(seed)
+        self.game = Game(rng, ai_players=[i for i in range(4) if i != human])
+        self.human_index = human
         self._held.clear()
-        self._cooldown = {player.index: 0.0 for player in self.game.players}
+        self._cooldown = 0.0
         self._ai_accumulator = 0.0
         self._paused = False
         self._phase = ""
@@ -110,6 +96,10 @@ class GameWidget(QWidget):
         self.update()
 
     @property
+    def human(self) -> Player | None:
+        return None if self.game is None else self.game.players[self.human_index]
+
+    @property
     def paused(self) -> bool:
         return self._paused
 
@@ -121,9 +111,7 @@ class GameWidget(QWidget):
         self.pause_toggled.emit(paused)
         self.update()
 
-    # ------------------------------------------------------------------ clavier
-
-    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802 (API Qt)
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.isAutoRepeat():
             return
         try:
@@ -143,46 +131,37 @@ class GameWidget(QWidget):
             if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
                 self.return_to_menu.emit()
             return
-        if self._paused:
-            return
-
-        binding = KEY_BINDINGS.get(key)
-        if binding is None:
+        if self._paused or key not in KEY_BINDINGS:
             super().keyPressEvent(event)
             return
-        player = self.game.players[binding.player]
-        if player.is_ai:
-            self.game.take_control(player)
-        if binding.direction is None:
+
+        direction = KEY_BINDINGS[key]
+        player = self.game.players[self.human_index]
+        if direction is None:
             self.game.place_bomb(player)
         else:
-            held = self._held.setdefault(binding.player, [])
-            if binding.direction in held:
-                held.remove(binding.direction)
-            held.append(binding.direction)
-            self._step(player, binding.direction)
+            if direction in self._held:
+                self._held.remove(direction)
+            self._held.append(direction)
+            self._step(player, direction)
         self._sync()
         self.update()
 
-    def keyReleaseEvent(self, event: QKeyEvent) -> None:  # noqa: N802 (API Qt)
+    def keyReleaseEvent(self, event: QKeyEvent) -> None:
         if event.isAutoRepeat():
             return
         try:
             key = Qt.Key(event.key())
         except ValueError:
             return
-        binding = KEY_BINDINGS.get(key)
-        if binding is not None and binding.direction is not None:
-            held = self._held.get(binding.player)
-            if held and binding.direction in held:
-                held.remove(binding.direction)
+        direction = KEY_BINDINGS.get(key)
+        if direction is not None and direction in self._held:
+            self._held.remove(direction)
 
     def _step(self, player: Player, direction: Direction) -> None:
         assert self.game is not None
         self.game.move(player, direction)
-        self._cooldown[player.index] = MOVE_REPEAT
-
-    # ------------------------------------------------------------------ horloge
+        self._cooldown = MOVE_REPEAT
 
     def _on_tick(self) -> None:
         game = self.game
@@ -192,7 +171,7 @@ class GameWidget(QWidget):
         if not game.over:
             self._move_held(game, dt)
             self._run_ai(game, dt)
-        game.tick(dt)  # après la fin, laisse les dernières bombes et flammes se résoudre
+        game.tick(dt)
         self._sync()
         if game.over:
             self._result_timer += dt
@@ -203,12 +182,11 @@ class GameWidget(QWidget):
         self.update()
 
     def _move_held(self, game: Game, dt: float) -> None:
-        for index, held in self._held.items():
-            if not held:
-                continue
-            self._cooldown[index] -= dt
-            if self._cooldown[index] <= 0.0:
-                self._step(game.players[index], held[-1])
+        if not self._held:
+            return
+        self._cooldown -= dt
+        if self._cooldown <= 0.0:
+            self._step(game.players[self.human_index], self._held[-1])
 
     def _run_ai(self, game: Game, dt: float) -> None:
         self._ai_accumulator += dt
@@ -241,9 +219,7 @@ class GameWidget(QWidget):
             self._phase = phase
             self.phase_changed.emit(phase)
 
-    # ------------------------------------------------------------------ rendu
-
-    def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802 (API Qt)
+    def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
         if self.game is None:
             painter.fillRect(self.rect(), BACKGROUND)
@@ -253,6 +229,5 @@ class GameWidget(QWidget):
                 remaining = max(0, math.ceil(RESULT_DELAY - self._result_timer))
                 self.renderer.paint_result(painter, self.game, self.rect(), remaining)
             elif self._paused:
-                # Le titre et les boutons viennent de PauseOverlay : on assombrit seulement.
                 self.renderer.paint_dim(painter, self.rect(), "")
         painter.end()

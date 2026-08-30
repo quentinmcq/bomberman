@@ -1,6 +1,6 @@
 # Bomberman
 
-Jeu de type *Bomberman* à 1-4 joueurs (humains ou IA) en **Python / PyQt6**. Éliminez vos
+Jeu de type *Bomberman* — un joueur contre trois IA — en **Python / PyQt6**. Éliminez vos
 adversaires à coups de bombes ; les briques détruites libèrent des power-ups (portée, nombre de
 bombes, bombe perforante) mais aussi des malus (crâne : contrôles inversés pendant 10 s).
 
@@ -35,15 +35,15 @@ Options : `--seed 42` (terrain reproductible), `--no-audio`, `--fullscreen`, `-v
 
 ## Commandes
 
-| Joueur | Déplacements | Bombe |
-| --- | --- | --- |
-| Rouge (humain) | Z Q S D — ou W A S D | Espace |
-| Bleu | O K L M | Maj |
-| Jaune | Flèches | Ctrl ou 0 |
-| Rose | Pavé numérique 8 4 5 6 | + |
+Avant la partie, choisissez votre personnage (Rouge, Bleu, Jaune ou Rose — le choix est
+mémorisé) ; les trois autres sont pilotés par l'IA.
 
-Les joueurs Bleu, Jaune et Rose sont pilotés par l'IA jusqu'à ce qu'un humain appuie sur l'une de
-leurs touches. `Échap` : pause · `F11` : plein écran.
+| Action | Touches |
+| --- | --- |
+| Se déplacer | Z Q S D (ou W A S D) — ou les flèches |
+| Poser une bombe | Espace |
+| Pause | Échap |
+| Plein écran | F11 |
 
 ## Règles
 

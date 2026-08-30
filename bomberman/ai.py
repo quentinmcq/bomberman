@@ -22,10 +22,8 @@ from dataclasses import dataclass
 
 from .model import BOMB_FUSE, Bomb, Coord, Direction, Game, Player, Tile
 
-AI_PERIOD = 0.5  # secondes entre deux décisions
-ESCAPE_DEPTH = 8  # longueur max. d'un chemin de fuite quand on est déjà en danger
-# Avant de poser une bombe, l'issue doit être atteignable avant l'explosion :
-# une case par décision, en gardant une décision de marge.
+AI_PERIOD = 0.5
+ESCAPE_DEPTH = 8
 BOMB_ESCAPE_STEPS = int(BOMB_FUSE / AI_PERIOD) - 1
 SEARCH_DEPTH = 40
 RANDOM_MOVE_CHANCE = 0.75
@@ -35,7 +33,7 @@ _DIRECTION_BY_DELTA = {direction.value: direction for direction in Direction}
 
 @dataclass(frozen=True)
 class Action:
-    kind: str  # "move" | "bomb" | "wait"
+    kind: str
     direction: Direction | None = None
 
 
@@ -107,10 +105,8 @@ def decide(game: Game, player: Player, rng: random.Random) -> Action:
     flames = set(game.flames)
 
     def as_move(direction: Direction) -> Action:
-        # Les contrôles d'un joueur maudit sont inversés : on compense.
         return move(direction.opposite if player.cursed else direction)
 
-    # 1. Survie
     if pos in danger:
         escape = find_path(game, pos, lambda p: p not in danger, flames, ESCAPE_DEPTH)
         if escape:
@@ -119,7 +115,6 @@ def decide(game: Game, player: Player, rng: random.Random) -> Action:
 
     enemies = [p for p in game.players if p.alive and p is not player]
 
-    # 2. Attaque
     if player.bombs_placed < player.max_bombs and game.bomb_at(*pos) is None:
         hypothetical = Bomb(pos[0], pos[1], player.index, player.fire_range, player.pierce)
         blast = game.blast_cells(hypothetical)
@@ -131,7 +126,6 @@ def decide(game: Game, player: Player, rng: random.Random) -> Action:
             if escape:
                 return PLACE_BOMB
 
-    # 3. Exploration
     malus = {p for p, powerup in game.powerups.items() if not powerup.is_bonus}
 
     def is_target(cell: Coord) -> bool:

@@ -25,14 +25,10 @@ IMAGES_DIR = ROOT / "bomberman" / "assets" / "images"
 SOUNDS_DIR = ROOT / "bomberman" / "assets" / "sounds"
 
 RGBA = tuple[int, int, int, int]
-Image = list[list[RGBA]]  # image[y][x]
+Image = list[list[RGBA]]
 
-SPRITE = 16  # taille native d'un sprite (pixels)
-SCALE = 4  # facteur d'agrandissement à l'export (16 -> 64 px)
-
-# ---------------------------------------------------------------------------
-# Encodage PNG
-# ---------------------------------------------------------------------------
+SPRITE = 16
+SCALE = 4
 
 
 def _chunk(kind: bytes, data: bytes) -> bytes:
@@ -49,7 +45,7 @@ def write_png(path: Path, image: Image) -> None:
     width = len(image[0])
     raw = bytearray()
     for row in image:
-        raw.append(0)  # filtre "None"
+        raw.append(0)
         for r, g, b, a in row:
             raw += bytes((r, g, b, a))
     png = (
@@ -60,10 +56,6 @@ def write_png(path: Path, image: Image) -> None:
     )
     path.write_bytes(png)
 
-
-# ---------------------------------------------------------------------------
-# Outils image
-# ---------------------------------------------------------------------------
 
 TRANSPARENT: RGBA = (0, 0, 0, 0)
 
@@ -116,25 +108,21 @@ class Lcg:
         return self.state / 0x7FFFFFFF
 
 
-# ---------------------------------------------------------------------------
-# Palettes
-# ---------------------------------------------------------------------------
-
 BASE_PALETTE: dict[str, RGBA] = {
     ".": TRANSPARENT,
-    "K": (24, 24, 32, 255),  # contour
-    "W": (245, 245, 245, 255),  # blanc
-    "G": (122, 126, 142, 255),  # combinaison grise
-    "g": (82, 86, 100, 255),  # ombre grise
-    "D": (47, 50, 71, 255),  # corps de bombe / visière
-    "E": (120, 230, 255, 255),  # yeux lumineux
-    "Y": (255, 224, 64, 255),  # étincelle jaune
-    "O": (255, 140, 0, 255),  # orange
-    "R": (143, 29, 44, 255),  # rouge sombre (bombe perforante)
-    "M": (205, 208, 220, 255),  # métal
-    "P": (120, 60, 160, 255),  # violet (malus)
-    "V": (60, 200, 80, 255),  # vert (signe +)
-    "X": (225, 50, 50, 255),  # rouge vif (signe -)
+    "K": (24, 24, 32, 255),
+    "W": (245, 245, 245, 255),
+    "G": (122, 126, 142, 255),
+    "g": (82, 86, 100, 255),
+    "D": (47, 50, 71, 255),
+    "E": (120, 230, 255, 255),
+    "Y": (255, 224, 64, 255),
+    "O": (255, 140, 0, 255),
+    "R": (143, 29, 44, 255),
+    "M": (205, 208, 220, 255),
+    "P": (120, 60, 160, 255),
+    "V": (60, 200, 80, 255),
+    "X": (225, 50, 50, 255),
 }
 
 TEAM_COLORS: dict[str, RGBA] = {
@@ -152,10 +140,6 @@ def team_palette(color: RGBA) -> dict[str, RGBA]:
     palette["H"] = shade(color, 1.35)
     return palette
 
-
-# ---------------------------------------------------------------------------
-# Sprites des joueurs (16x16, 4 directions x 3 images)
-# ---------------------------------------------------------------------------
 
 _FRONT_BODY = [
     "......KKKK......",
@@ -262,10 +246,6 @@ def build_player_sheet(color: RGBA) -> Image:
     return sheet
 
 
-# ---------------------------------------------------------------------------
-# Bombes
-# ---------------------------------------------------------------------------
-
 BOMB = [
     "..........YO....",
     ".........OY.....",
@@ -303,10 +283,6 @@ BOMB_PIERCE = [
     ".M...KKKKKK...M.",
     "................",
 ]
-
-# ---------------------------------------------------------------------------
-# Tuiles de terrain (générées algorithmiquement)
-# ---------------------------------------------------------------------------
 
 
 def floor_tile() -> Image:
@@ -350,24 +326,20 @@ def brick_tile() -> Image:
     brick: RGBA = (196, 86, 46, 255)
     brick_shade: RGBA = (160, 64, 36, 255)
     img = blank(SPRITE, SPRITE, mortar)
-    course_height = 4  # 3 px de brique + 1 px de mortier
-    brick_width = 8  # 7 px de brique + 1 px de mortier
+    course_height = 4
+    brick_width = 8
     for y in range(SPRITE):
         if y % course_height == course_height - 1:
-            continue  # ligne de mortier
+            continue
         offset = 0 if (y // course_height) % 2 == 0 else brick_width // 2
         for x in range(SPRITE):
             if (x + offset) % brick_width == brick_width - 1:
-                continue  # joint vertical
+                continue
             bottom = y % course_height == course_height - 2
             right = (x + offset) % brick_width == brick_width - 2
             img[y][x] = brick_shade if (bottom or right) else brick
     return img
 
-
-# ---------------------------------------------------------------------------
-# Flammes
-# ---------------------------------------------------------------------------
 
 FLAME_BANDS: Sequence[tuple[float, RGBA]] = (
     (2.2, (255, 250, 205, 255)),
@@ -406,10 +378,6 @@ def flame_vertical() -> Image:
     horizontal = flame_horizontal()
     return [[horizontal[x][y] for x in range(SPRITE)] for y in range(SPRITE)]
 
-
-# ---------------------------------------------------------------------------
-# Power-ups
-# ---------------------------------------------------------------------------
 
 GLYPH_FIRE = [
     "....Y.....",
@@ -514,11 +482,6 @@ def powerup_tiles() -> dict[str, Image]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Génération des images
-# ---------------------------------------------------------------------------
-
-
 def generate_images(out_dir: Path = IMAGES_DIR) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     tiles: dict[str, Image] = {
@@ -543,10 +506,6 @@ def generate_images(out_dir: Path = IMAGES_DIR) -> list[Path]:
         written.append(path)
     return written
 
-
-# ---------------------------------------------------------------------------
-# Synthèse sonore (chiptune)
-# ---------------------------------------------------------------------------
 
 SAMPLE_RATE = 22050
 
@@ -830,9 +789,6 @@ def generate_sounds(out_dir: Path = SOUNDS_DIR, names: Sequence[str] | None = No
         write_wav(path, builder())
         written.append(path)
     return written
-
-
-# ---------------------------------------------------------------------------
 
 
 def main(argv: Sequence[str] | None = None) -> int:

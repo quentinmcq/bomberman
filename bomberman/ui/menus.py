@@ -2,17 +2,30 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
+from PyQt6.QtCore import QSettings, QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import (
+    QButtonGroup,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSlider,
+    QVBoxLayout,
+    QWidget,
+)
+
+from ..assets import Textures
+from ..model import PLAYER_NAMES, Direction
+from .styles import TEAM_COLORS
 
 CONTROLS_HELP = (
-    "<b>Joueur Rouge</b> : Z Q S D (ou W A S D) + Espace &nbsp;·&nbsp; "
-    "<b>Bleu</b> : O K L M + Maj<br>"
-    "<b>Jaune</b> : flèches + Ctrl ou 0 &nbsp;·&nbsp; "
-    "<b>Rose</b> : pavé 8 4 5 6 + « + »<br>"
-    "Les joueurs Bleu, Jaune et Rose sont pilotés par l'IA jusqu'à ce qu'un humain "
-    "appuie sur l'une de leurs touches. &nbsp;Échap : pause &nbsp;·&nbsp; F11 : plein écran"
+    "<b>Déplacement</b> : Z Q S D (ou W A S D) ou les flèches &nbsp;·&nbsp; "
+    "<b>Bombe</b> : Espace<br>"
+    "Les trois autres personnages sont pilotés par l'IA. "
+    "&nbsp;Échap : pause &nbsp;·&nbsp; F11 : plein écran"
 )
+
+SETTINGS_PLAYER_KEY = "player"
 
 
 def _button(text: str) -> QPushButton:
@@ -78,6 +91,75 @@ class MenuPage(QWidget):
             layout.addWidget(button, 0, Qt.AlignmentFlag.AlignHCenter)
         layout.addSpacing(24)
         layout.addWidget(hint, 0, Qt.AlignmentFlag.AlignHCenter)
+
+
+class SetupPage(QWidget):
+    """Choix du personnage (couleur) avant la partie ; le choix est mémorisé."""
+
+    start = pyqtSignal(int)
+    back = pyqtSignal()
+
+    def __init__(
+        self, textures: Textures, settings: QSettings, parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self._settings = settings
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        title = QLabel("Choisis ton personnage")
+        title.setObjectName("subtitle")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.group = QButtonGroup(self)
+        self.group.setExclusive(True)
+        row = QHBoxLayout()
+        row.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.character_buttons: list[QPushButton] = []
+        for index, name in enumerate(PLAYER_NAMES):
+            button = QPushButton(name)
+            button.setCheckable(True)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setIcon(QIcon(textures.player(index, Direction.DOWN, 0, 96)))
+            button.setIconSize(QSize(96, 96))
+            button.setStyleSheet(
+                f"QPushButton {{ background: {TEAM_COLORS[index]}; min-width: 170px;"
+                " min-height: 150px; padding: 8px; }"
+                " QPushButton:checked { border: 4px solid white; }"
+            )
+            self.group.addButton(button, index)
+            row.addWidget(button)
+            self.character_buttons.append(button)
+
+        stored = settings.value(SETTINGS_PLAYER_KEY, 0, type=int)
+        self.character_buttons[stored if 0 <= stored < len(PLAYER_NAMES) else 0].setChecked(True)
+
+        hint = QLabel(CONTROLS_HELP)
+        hint.setObjectName("hint")
+        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hint.setTextFormat(Qt.TextFormat.RichText)
+
+        self.play_button = _button("Jouer")
+        self.back_button = _button("Retour")
+        self.play_button.clicked.connect(self._on_play)
+        self.back_button.clicked.connect(self.back)
+
+        layout.addWidget(title)
+        layout.addSpacing(12)
+        layout.addLayout(row)
+        layout.addSpacing(12)
+        layout.addWidget(hint, 0, Qt.AlignmentFlag.AlignHCenter)
+        layout.addSpacing(12)
+        layout.addWidget(self.play_button, 0, Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self.back_button, 0, Qt.AlignmentFlag.AlignHCenter)
+
+    @property
+    def selected(self) -> int:
+        return max(0, self.group.checkedId())
+
+    def _on_play(self) -> None:
+        self._settings.setValue(SETTINGS_PLAYER_KEY, self.selected)
+        self.start.emit(self.selected)
 
 
 class OptionsPage(QWidget):

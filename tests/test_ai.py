@@ -11,11 +11,10 @@ from helpers import open_arena
 
 def test_ai_escapes_from_its_own_bomb():
     game = open_arena()
-    blue = game.players[1]  # (1, 19)
+    blue = game.players[1]
     assert game.place_bomb(blue)
     danger = ai.danger_cells(game)
     assert blue.pos in danger
-    # Portée 1 : les deux cases voisines sont dans le souffle, il faut deux pas.
     for _ in range(2):
         action = ai.decide(game, blue, random.Random(0))
         assert action.kind == "move"
@@ -26,7 +25,7 @@ def test_ai_escapes_from_its_own_bomb():
 
 def test_ai_bombs_a_brick_when_it_can_escape():
     game = open_arena()
-    blue = game.players[1]  # (1, 19), sortie possible vers (2, 19)
+    blue = game.players[1]
     game.grid[1][18] = Tile.BRICK
     action = ai.decide(game, blue, random.Random(0))
     assert action == ai.PLACE_BOMB
@@ -36,20 +35,20 @@ def test_ai_refuses_to_bomb_without_escape():
     game = open_arena()
     blue = game.players[1]
     game.grid[1][18] = Tile.BRICK
-    game.grid[2][19] = Tile.BRICK  # plus aucune issue
+    game.grid[2][19] = Tile.BRICK
     action = ai.decide(game, blue, random.Random(0))
     assert action == ai.WAIT
 
 
 def test_ai_refuses_to_bomb_when_the_escape_is_too_long():
     game = open_arena()
-    blue = game.players[1]  # (1, 19)
-    game.grid[1][18] = Tile.BRICK  # cible
+    blue = game.players[1]
+    game.grid[1][18] = Tile.BRICK
     for r in range(3, 10, 2):
-        game.grid[r][18] = Tile.BRICK  # ferme les sorties latérales du couloir
-    blue.fire_range = 8  # le souffle descend jusqu'en (9, 19) : 9 pas pour en sortir
+        game.grid[r][18] = Tile.BRICK
+    blue.fire_range = 8
     assert ai.decide(game, blue, random.Random(0)) != ai.PLACE_BOMB
-    blue.fire_range = 1  # deux pas suffisent : la bombe est posée
+    blue.fire_range = 1
     assert ai.decide(game, blue, random.Random(0)) == ai.PLACE_BOMB
 
 
@@ -85,9 +84,9 @@ def test_cursed_ai_compensates_inverted_controls():
     blue.curse_left = 5.0
     game.powerups[(1, 17)] = PowerUp.FIRE_UP
     action = ai.decide(game, blue, random.Random(0))
-    assert action.direction is Direction.RIGHT  # inversé par la malédiction...
+    assert action.direction is Direction.RIGHT
     assert game.move(blue, action.direction)
-    assert blue.pos == (1, 18)  # ...mais le joueur va bien vers la gauche
+    assert blue.pos == (1, 18)
 
 
 def simulate(game: Game, seconds: float, rng: random.Random, check=None) -> None:

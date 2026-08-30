@@ -38,7 +38,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     from .ui.main_window import MainWindow
 
     if not args.verbose:
-        # Le backend FFmpeg de QtMultimedia décrit chaque fichier ouvert sur stderr.
         QLoggingCategory.setFilterRules("qt.multimedia.ffmpeg*=false")
 
     app = QApplication(sys.argv[:1])

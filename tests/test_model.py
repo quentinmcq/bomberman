@@ -43,9 +43,6 @@ class ScriptedRandom:
         return self._values.pop(0) if self._values else 0.99
 
 
-# --------------------------------------------------------------------------- terrain
-
-
 def test_grid_layout():
     game = make_game()
     grid = game.grid
@@ -99,9 +96,6 @@ def test_players_start_in_corners():
     assert [player.name for player in game.players] == ["Rouge", "Bleu", "Jaune", "Rose"]
 
 
-# --------------------------------------------------------------------------- déplacements
-
-
 def test_move_into_free_cell():
     game = make_game()
     clear_bricks(game)
@@ -117,7 +111,7 @@ def test_move_blocked_by_stone_brick_bomb_and_player():
     clear_bricks(game)
     player = game.players[0]
 
-    assert not game.move(player, Direction.UP)  # (0, 1) : pierre
+    assert not game.move(player, Direction.UP)
     assert player.pos == (1, 1)
     assert player.facing is Direction.UP
 
@@ -133,7 +127,7 @@ def test_move_blocked_by_stone_brick_bomb_and_player():
     other.row, other.col = 1, 2
     assert not game.move(player, Direction.RIGHT)
 
-    other.alive = False  # un joueur mort ne bloque plus
+    other.alive = False
     assert game.move(player, Direction.RIGHT)
 
 
@@ -158,7 +152,7 @@ def test_curse_inverts_controls_and_expires():
         (PowerUp.FIRE_UP, "fire_range", 2),
         (PowerUp.BOMB_UP, "max_bombs", 2),
         (PowerUp.PIERCE, "pierce", True),
-        (PowerUp.FIRE_DOWN, "fire_range", 1),  # jamais en dessous de 1
+        (PowerUp.FIRE_DOWN, "fire_range", 1),
         (PowerUp.BOMB_DOWN, "max_bombs", 1),
         (PowerUp.SKULL, "curse_left", CURSE_DURATION),
     ],
@@ -190,18 +184,15 @@ def test_powerups_are_capped():
     assert player.max_bombs == 1
 
 
-# --------------------------------------------------------------------------- bombes
-
-
 def test_place_bomb_respects_limit_and_occupied_cell():
     game = make_game()
     clear_bricks(game)
     player = game.players[0]
     assert game.place_bomb(player)
     assert player.bombs_placed == 1
-    assert not game.place_bomb(player)  # même case déjà occupée
+    assert not game.place_bomb(player)
     assert game.move(player, Direction.RIGHT)
-    assert not game.place_bomb(player)  # limite d'une bombe atteinte
+    assert not game.place_bomb(player)
     player.max_bombs = 2
     assert game.place_bomb(player)
     assert len(game.bombs) == 2
@@ -214,7 +205,7 @@ def test_bomb_explodes_after_fuse_and_frees_slot():
     player = game.players[0]
     assert game.place_bomb(player)
     assert game.move(player, Direction.DOWN)
-    assert game.move(player, Direction.DOWN)  # hors de portée (portée 1)
+    assert game.move(player, Direction.DOWN)
     tick(game, BOMB_FUSE - 0.2)
     assert len(game.bombs) == 1
     tick(game, 0.4)
@@ -224,7 +215,7 @@ def test_bomb_explodes_after_fuse_and_frees_slot():
     assert (1, 1) in game.flames and game.flames[(1, 1)].shape is FlameShape.CENTER
     assert (1, 2) in game.flames and game.flames[(1, 2)].shape is FlameShape.HORIZONTAL
     assert (2, 1) in game.flames and game.flames[(2, 1)].shape is FlameShape.VERTICAL
-    assert (0, 1) not in game.flames  # la pierre arrête le souffle
+    assert (0, 1) not in game.flames
     kinds = [event.kind for event in game.drain_events()]
     assert kinds.count("explosion") == 1
 
@@ -244,7 +235,7 @@ def test_explosion_destroys_first_brick_and_stops():
     clear_bricks(game)
     game.grid[5][7] = Tile.BRICK
     game.grid[5][8] = Tile.BRICK
-    game.rng = ScriptedRandom([0.9])  # pas de power-up
+    game.rng = ScriptedRandom([0.9])
     game.bombs.append(Bomb(5, 5, owner=0, fire_range=4, fuse=0.01))
     tick(game, 0.1)
     assert game.grid[5][7] is Tile.FLOOR
@@ -272,7 +263,6 @@ def test_powerup_drop_follows_odds_table():
     game = make_game()
     clear_bricks(game)
     game.grid[5][6] = Tile.BRICK
-    # 0.1 < 20 % : un power-up tombe ; 0.5 tombe dans la tranche BOMB_UP (0.45 - 0.55).
     game.rng = ScriptedRandom([0.1, 0.5])
     game.bombs.append(Bomb(5, 5, owner=0, fire_range=1, fuse=0.01))
     tick(game, 0.1)
@@ -298,13 +288,10 @@ def test_chain_reaction():
     game.bombs.append(Bomb(5, 6, owner=1, fire_range=1, fuse=BOMB_FUSE))
     tick(game, 0.1)
     assert game.bombs == []
-    assert (5, 7) in game.flames  # souffle de la seconde bombe
+    assert (5, 7) in game.flames
     assert game.players[1].bombs_placed == 0
     kinds = [event.kind for event in game.drain_events()]
     assert kinds.count("explosion") == 2
-
-
-# --------------------------------------------------------------------------- morts, scores, fin
 
 
 def test_kill_awards_points_and_ends_the_duel():
@@ -390,11 +377,8 @@ def test_walking_into_a_flame_ends_the_duel_immediately():
     game.flames[(1, 2)] = Flame(1, 2, FlameShape.CENTER, owner=blue.index)
     assert game.move(red, Direction.RIGHT)
     assert not red.alive
-    assert game.over and game.winner is blue  # sans attendre le tick suivant
+    assert game.over and game.winner is blue
     assert [event.kind for event in game.drain_events()] == ["death", "game_over"]
-
-
-# --------------------------------------------------------------------------- souffle
 
 
 def test_blast_cells_follow_propagation_rules():
@@ -403,10 +387,10 @@ def test_blast_cells_follow_propagation_rules():
     game.grid[5][7] = Tile.BRICK
     cells = game.blast_cells(Bomb(5, 5, owner=0, fire_range=4))
     assert (5, 5) in cells
-    assert (5, 6) in cells and (5, 7) in cells  # la brique est touchée...
-    assert (5, 8) not in cells  # ...et arrête le souffle
-    assert (1, 5) in cells and (9, 5) in cells  # portée 4 vers le haut et le bas
-    assert (0, 5) not in game.blast_cells(Bomb(3, 5, owner=0, fire_range=4))  # pierre
+    assert (5, 6) in cells and (5, 7) in cells
+    assert (5, 8) not in cells
+    assert (1, 5) in cells and (9, 5) in cells
+    assert (0, 5) not in game.blast_cells(Bomb(3, 5, owner=0, fire_range=4))
 
     pierce = game.blast_cells(Bomb(5, 5, owner=0, fire_range=4, pierce=True))
     assert (5, 8) in pierce and (5, 9) in pierce
@@ -414,5 +398,5 @@ def test_blast_cells_follow_propagation_rules():
     game.bombs.append(Bomb(5, 3, owner=1, fire_range=1))
     game.powerups[(7, 5)] = PowerUp.FIRE_UP
     cells = game.blast_cells(Bomb(5, 5, owner=0, fire_range=4))
-    assert (5, 3) in cells and (5, 2) not in cells  # une bombe arrête le souffle
-    assert (7, 5) in cells and (8, 5) not in cells  # un power-up aussi
+    assert (5, 3) in cells and (5, 2) not in cells
+    assert (7, 5) in cells and (8, 5) not in cells

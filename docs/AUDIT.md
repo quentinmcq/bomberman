@@ -132,8 +132,8 @@ aux tests (`clear_bricks`, `open_arena`, `tick`) vivent dans `tests/helpers.py`.
 | Pause | cassée | Continuer / Son / Menu principal / Quitter |
 | Musique | menu seulement (fichiers manquants) | menu, combat, duel (2 survivants), victoire, égalité |
 | IA | conditions copiées, aucune notion de danger, teste le mauvais joueur | carte des souffles, fuite par BFS, ne pose une bombe que si une issue est atteignable en ≤ 5 pas |
-| Cheat touche A | présent | retiré ; alias W A S D ajoutés |
-| Prise de contrôle d'une IA | par n'importe quelle touche du joueur | idem (conservé) |
+| Cheat touche A | présent | retiré |
+| Joueurs humains | jusqu'à 4, chacun avec ses touches ; une IA passait humaine dès qu'on touchait « ses » touches | un humain qui choisit son personnage avant la partie (choix mémorisé) ; touches fixes Z Q S D / W A S D / flèches + Espace ; les trois autres restent des IA |
 
 Les probabilités de power-ups, la grille 21 × 19, les 25 % de briques retirées, la mèche de 3 s,
 les plafonds (8 bombes / portée 8) et les touches d'origine sont conservés à l'identique.

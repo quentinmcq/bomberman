@@ -15,13 +15,13 @@ Coord = tuple[int, int]
 
 GRID_COLS = 21
 GRID_ROWS = 19
-BOMB_FUSE = 3.0  # secondes avant explosion
-FLAME_DURATION = 0.45  # durée d'affichage (et de létalité) des flammes
-CURSE_DURATION = 10.0  # durée de la malédiction "crâne" (contrôles inversés)
+BOMB_FUSE = 3.0
+FLAME_DURATION = 0.45
+CURSE_DURATION = 10.0
 MAX_BOMBS = 8
 MAX_RANGE = 8
-BRICK_REMOVAL_CHANCE = 0.25  # proportion de briques retirées au tirage du terrain
-POWERUP_DROP_CHANCE = 0.20  # chance qu'une brique détruite laisse un power-up
+BRICK_REMOVAL_CHANCE = 0.25
+POWERUP_DROP_CHANCE = 0.20
 BRICK_SCORE = 1
 KILL_SCORE = 5
 
@@ -30,8 +30,8 @@ PLAYER_NAMES: Sequence[str] = ("Rouge", "Bleu", "Jaune", "Rose")
 
 class Tile(IntEnum):
     FLOOR = 0
-    BRICK = 1  # destructible
-    STONE = 2  # indestructible
+    BRICK = 1
+    STONE = 2
 
 
 class Direction(Enum):
@@ -81,7 +81,6 @@ class PowerUp(Enum):
         return self in (PowerUp.FIRE_UP, PowerUp.BOMB_UP, PowerUp.PIERCE)
 
 
-# Probabilités du jeu d'origine (somme = 1).
 POWERUP_ODDS: Sequence[tuple[PowerUp, float]] = (
     (PowerUp.FIRE_UP, 0.45),
     (PowerUp.BOMB_UP, 0.10),
@@ -156,7 +155,7 @@ class Flame:
 class GameEvent:
     """Fait marquant produit par le moteur (pour les sons / l'interface)."""
 
-    kind: str  # "bomb_placed" | "explosion" | "pickup" | "death" | "game_over"
+    kind: str
     player: int | None = None
     pos: Coord | None = None
     powerup: PowerUp | None = None
@@ -232,8 +231,6 @@ class Game:
         self.over = False
         self.winner: Player | None = None
 
-    # ------------------------------------------------------------------ requêtes
-
     def in_bounds(self, r: int, c: int) -> bool:
         return 0 <= r < self.rows and 0 <= c < self.cols
 
@@ -298,8 +295,6 @@ class Game:
         events, self.events = self.events, []
         return events
 
-    # ------------------------------------------------------------------ actions
-
     def take_control(self, player: Player) -> None:
         """Un humain prend la main sur un joueur contrôlé par l'IA."""
         player.is_ai = False
@@ -333,8 +328,6 @@ class Game:
         self.events.append(GameEvent("bomb_placed", player.index, player.pos))
         return True
 
-    # ------------------------------------------------------------------ temps
-
     def tick(self, dt: float) -> None:
         """Fait avancer le temps de ``dt`` secondes."""
         self.elapsed += dt
@@ -353,12 +346,10 @@ class Game:
         for bomb in self.bombs:
             bomb.fuse -= dt
         for bomb in [b for b in self.bombs if b.fuse <= 0.0]:
-            if bomb in self.bombs:  # peut avoir déjà explosé en chaîne
+            if bomb in self.bombs:
                 self._explode(bomb)
 
         self._check_game_over()
-
-    # ------------------------------------------------------------------ interne
 
     def _enter_cell(self, player: Player) -> None:
         powerup = self.powerups.pop(player.pos, None)
@@ -398,16 +389,14 @@ class Game:
 
             for direction in Direction:
                 shape = FlameShape.HORIZONTAL if direction.horizontal else FlameShape.VERTICAL
-                # Le rayon est calculé avant toute modification : la brique détruite
-                # ci-dessous a bien arrêté le souffle.
                 for r, c in self.blast_ray(bomb, direction):
                     if self.grid[r][c] is Tile.BRICK:
-                        self._destroy_brick(r, c, owner)  # peut lâcher un power-up
+                        self._destroy_brick(r, c, owner)
                     else:
                         other = self.bomb_at(r, c)
                         if other is not None:
                             queue.append(other)
-                        self.powerups.pop((r, c), None)  # un power-up exposé brûle
+                        self.powerups.pop((r, c), None)
                     self._burn((r, c), shape, bomb.owner)
 
     def _destroy_brick(self, r: int, c: int, owner: Player) -> None:
@@ -441,7 +430,7 @@ class Game:
         if killer != victim.index:
             self.players[killer].score += KILL_SCORE
         self.events.append(GameEvent("death", victim.index, victim.pos))
-        self._check_game_over()  # une mort hors tick (marche dans une flamme) compte aussi
+        self._check_game_over()
 
     def _check_game_over(self) -> None:
         if self.over:

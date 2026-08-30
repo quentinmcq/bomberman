@@ -13,10 +13,10 @@ ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 IMAGES_DIR = ASSETS_DIR / "images"
 SOUNDS_DIR = ASSETS_DIR / "sounds"
 
-FRAME_SIZE = 64  # taille d'une image dans les feuilles de sprites générées
+FRAME_SIZE = 64
 PLAYER_SHEETS = ("player_red", "player_blue", "player_yellow", "player_pink")
 SHEET_ROWS = {Direction.UP: 0, Direction.DOWN: 1, Direction.LEFT: 2, Direction.RIGHT: 3}
-WALK_CYCLE = (0, 1, 0, 2)  # image affichée selon Player.frame (comme le jeu d'origine)
+WALK_CYCLE = (0, 1, 0, 2)
 
 TILE_TEXTURES = ("floor", "stone", "brick", "bomb", "bomb_pierce")
 
@@ -35,8 +35,6 @@ FLAME_TEXTURES = {
     FlameShape.VERTICAL: "flame_v",
 }
 
-# Au-delà de ce nombre de pixmaps redimensionnés (redimensionnements de fenêtre
-# successifs), le cache est vidé plutôt que de croître indéfiniment.
 SCALED_CACHE_LIMIT = 512
 
 
@@ -99,7 +97,7 @@ class Textures:
             size,
             size,
             Qt.AspectRatioMode.IgnoreAspectRatio,
-            Qt.TransformationMode.FastTransformation,  # pixel-art : pas de lissage
+            Qt.TransformationMode.FastTransformation,
         )
         self._scaled[key] = pixmap
         return pixmap

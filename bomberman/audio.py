@@ -16,8 +16,8 @@ from .assets import sound_path
 
 try:
     from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
-except ImportError:  # pragma: no cover - dépend de l'installation de PyQt6
-    QAudioOutput = QMediaPlayer = QSoundEffect = None  # type: ignore[assignment,misc]
+except ImportError:
+    QAudioOutput = QMediaPlayer = QSoundEffect = None
 
 log = logging.getLogger(__name__)
 
@@ -67,13 +67,11 @@ class AudioManager(QObject):
                 effect.setSource(QUrl.fromLocalFile(str(path)))
                 self._effects[name] = effect
             self._apply_volume()
-        except Exception as exc:  # pragma: no cover - backend audio absent
+        except Exception as exc:
             log.warning("Initialisation audio impossible, jeu silencieux : %s", exc)
             self._player = None
             self._output = None
             self._effects.clear()
-
-    # ------------------------------------------------------------------ musique
 
     def play_music(self, track: str) -> None:
         """Lance ``track`` (en boucle pour les ambiances) ; sans effet si elle joue déjà."""
@@ -99,14 +97,10 @@ class AudioManager(QObject):
         if self._player is not None:
             self._player.stop()
 
-    # ------------------------------------------------------------------ effets
-
     def play_sfx(self, name: str) -> None:
         effect = self._effects.get(name)
         if effect is not None:
             effect.play()
-
-    # ------------------------------------------------------------------ réglages
 
     @property
     def volume(self) -> int:
