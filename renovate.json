@@ -1,0 +1,36 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Paris",
+  "schedule": ["before 8am on monday"],
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 8am on the first day of the month"]
+  },
+  "packageRules": [
+    {
+      "description": "PyQt6 et ses paquets compagnons (Qt6, sip) doivent avancer ensemble",
+      "matchPackageNames": ["/^pyqt6/i"],
+      "groupName": "PyQt6"
+    },
+    {
+      "description": "Outils de développement : une seule PR, fusion automatique si la CI est verte",
+      "matchDepTypes": ["dependency-groups"],
+      "groupName": "outils de développement",
+      "automerge": true
+    },
+    {
+      "description": "Actions GitHub utilisées par la CI",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "automerge": true
+    },
+    {
+      "description": "Nouvelle version mineure/patch de Python : PR simple à relire",
+      "matchManagers": ["pyenv"],
+      "groupName": "Python"
+    }
+  ]
+}

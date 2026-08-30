@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12", "3.14"]
+    env:
+      QT_QPA_PLATFORM: offscreen
+      BOMBERMAN_NO_AUDIO: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer uv et Python
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Bibliothèques système requises par Qt (rendu offscreen)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libopengl0 libxkbcommon0 libfontconfig1 libglib2.0-0 libdbus-1-3
+
+      - name: Installer le projet et les outils de développement
+        run: uv sync --locked --group dev
+
+      - name: Lint (ruff)
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Tests (pytest)
+        run: uv run pytest
