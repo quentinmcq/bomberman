@@ -21,7 +21,7 @@ requires-dist = [{ name = "pyqt6", specifier = ">=6.11,<7" }]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "pytest", specifier = ">=9.1.1" },
     { name = "ruff", specifier = ">=0.16.5" },
 ]
 
