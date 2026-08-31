@@ -6,8 +6,7 @@
   "labels": ["dependencies"],
   "rangeStrategy": "bump",
   "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": ["before 8am on the first day of the month"]
+    "enabled": true
   },
   "packageRules": [
     {
