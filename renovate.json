@@ -5,31 +5,35 @@
   "timezone": "Europe/Paris",
   "labels": ["dependencies"],
   "rangeStrategy": "bump",
+  "automerge": true,
   "lockFileMaintenance": {
     "enabled": true
   },
   "packageRules": [
     {
-      "description": "PyQt6 et ses paquets compagnons (Qt6, sip) doivent avancer ensemble",
+      "description": "PyQt6 et ses paquets annexes",
       "matchPackageNames": ["/^pyqt6/i"],
       "groupName": "PyQt6"
     },
     {
-      "description": "Outils de développement : une seule PR, fusion automatique si la CI est verte",
+      "description": "Outils de développement",
       "matchDepTypes": ["dependency-groups"],
-      "groupName": "outils de développement",
-      "automerge": true
+      "groupName": "outils de développement"
     },
     {
-      "description": "Actions GitHub utilisées par la CI",
+      "description": "Actions GitHub",
       "matchManagers": ["github-actions"],
-      "groupName": "GitHub Actions",
-      "automerge": true
+      "groupName": "GitHub Actions"
     },
     {
-      "description": "Nouvelle version mineure/patch de Python : PR simple à relire",
+      "description": "Nouvelle version mineure/patch de Python",
       "matchManagers": ["pyenv"],
       "groupName": "Python"
+    },
+    {
+      "description": "Les versions majeures peuvent casser au-delà des tests : relecture manuelle",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
     }
   ]
 }
