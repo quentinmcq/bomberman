@@ -7,12 +7,8 @@ on:
 
 jobs:
   test:
-    name: Python ${{ matrix.python-version }}
+    name: Lint et tests
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.12", "3.14"]
     env:
       QT_QPA_PLATFORM: offscreen
       BOMBERMAN_NO_AUDIO: "1"
@@ -20,10 +16,10 @@ jobs:
       # Actions épinglées par SHA (recommandation GitHub/astral) ; Renovate met à jour SHA et commentaire.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # Sans input python-version, setup-uv lit .python-version (source unique, suivie par Renovate).
       - name: Installer uv et Python
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          python-version: ${{ matrix.python-version }}
           enable-cache: true
 
       - name: Bibliothèques système requises par Qt (rendu offscreen)
@@ -52,7 +48,6 @@ jobs:
       - name: Installer uv et Python
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          python-version: "3.14"
           enable-cache: true
 
       - name: pip-audit sur les dépendances verrouillées
