@@ -9,7 +9,7 @@ description = "Bomberman-like à 1-4 joueurs en PyQt6 (projet scolaire 2019, mod
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.10"
+requires-python = ">=3.14.7"
 authors = [{ name = "Quentin Macq" }]
 keywords = ["game", "pyqt6", "bomberman"]
 dependencies = ["PyQt6>=6.11,<7"]
